@@ -1,5 +1,5 @@
 o jogo final é o trabalho final oficial jogo rpg.
-
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 resumo do jogo 
 
 Este código atua como um Mestre de RPG estrategista que funciona como o "Doutor Estranho": ele simula milhares de linhas do tempo para encontrar a única jornada onde o herói vence com perfeição.
@@ -23,3 +23,16 @@ A engine ignora qualquer futuro que não termine em vitória total. Para vencer,
 
 4. A Jornada Perfeita (resolver_melhor)
 Através da tentativa e erro, o código descarta rotas onde o herói morre ou perde muito tempo. Ele "volta no tempo" quantas vezes for preciso para entregar o roteiro final: a rota mais rápida, segura e eficiente para a glória.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Códigos do retorno:
+
+resolver(Plano).
+
+resolver_melhor(Plano).
+
+poder([espada,escudo], P).
+
+caminho(vila, floresta).
+
+inimigo(X, Local, Forca).
