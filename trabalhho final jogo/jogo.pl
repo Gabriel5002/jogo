@@ -1,9 +1,9 @@
 % ==========================================================
-% JOGO DA VELHA - VERSÃO AVANÇADA (IA LÓGICA)
+% JOGO DA VELHA - VERSÃO MELHORADA
 % ==========================================================
 
 % =========================
-% 1. FATOS
+% 1. FATOS INICIAIS
 % =========================
 
 jogada(1,1,x).
@@ -16,42 +16,77 @@ jogada(2,2,o).
 jogada(3,1,x).
 
 % =========================
-% 2. REGRAS DE VITÓRIA
+% 2. ESTRUTURA DO TABULEIRO
 % =========================
 
 linha(1). linha(2). linha(3).
 coluna(1). coluna(2). coluna(3).
 
-% combinações vencedoras
-vitoria(J) :- jogada(1,1,J), jogada(1,2,J), jogada(1,3,J).
-vitoria(J) :- jogada(2,1,J), jogada(2,2,J), jogada(2,3,J).
-vitoria(J) :- jogada(3,1,J), jogada(3,2,J), jogada(3,3,J).
-
-vitoria(J) :- jogada(1,1,J), jogada(2,1,J), jogada(3,1,J).
-vitoria(J) :- jogada(1,2,J), jogada(2,2,J), jogada(3,2,J).
-vitoria(J) :- jogada(1,3,J), jogada(2,3,J), jogada(3,3,J).
-
-vitoria(J) :- jogada(1,1,J), jogada(2,2,J), jogada(3,3,J).
-vitoria(J) :- jogada(1,3,J), jogada(2,2,J), jogada(3,1,J).
+% todas posições possíveis
+pos(L,C) :- linha(L), coluna(C).
 
 % =========================
-% 3. TABULEIRO
+% 3. OCUPAÇÃO
 % =========================
 
 ocupado(L,C) :- jogada(L,C,_).
 
-livre(L,C) :-
-    linha(L), coluna(C),
-    \+ ocupado(L,C).
+livre(L,C) :- pos(L,C), \+ ocupado(L,C).
 
 % =========================
-% 4. LÓGICA DE JOGO
+% 4. COMBINAÇÕES VENCEDORAS
+% =========================
+
+combinacao([
+    (1,1),(1,2),(1,3)
+]).
+combinacao([
+    (2,1),(2,2),(2,3)
+]).
+combinacao([
+    (3,1),(3,2),(3,3)
+]).
+combinacao([
+    (1,1),(2,1),(3,1)
+]).
+combinacao([
+    (1,2),(2,2),(3,2)
+]).
+combinacao([
+    (1,3),(2,3),(3,3)
+]).
+combinacao([
+    (1,1),(2,2),(3,3)
+]).
+combinacao([
+    (1,3),(2,2),(3,1)
+]).
+
+% verifica se todas posições pertencem ao jogador
+todas_do_jogador([], _).
+todas_do_jogador([(L,C)|T], J) :-
+    jogada(L,C,J),
+    todas_do_jogador(T, J).
+
+% vitória genérica
+vitoria(J) :-
+    combinacao(Comb),
+    todas_do_jogador(Comb, J).
+
+% =========================
+% 5. JOGADORES
 % =========================
 
 jogador(x).
 jogador(o).
 
-% próximo jogador
+outro(x,o).
+outro(o,x).
+
+% =========================
+% 6. PRÓXIMO JOGADOR
+% =========================
+
 conta(J,N) :-
     findall(_, jogada(_,_,J), L),
     length(L,N).
@@ -65,36 +100,50 @@ proximo(o) :-
     NX > NO.
 
 % =========================
-% 5. INTELIGÊNCIA (IA)
+% 7. IA (SEM ASSERT/RETRACT)
 % =========================
 
-% quase vitória (2 peças + 1 livre)
-quase_vitoria(J,L,C) :-
+% verifica vitória simulando jogada
+vitoria_com_jogada(J,L,C) :-
+    combinacao(Comb),
+    member((L,C), Comb),
+    conta_posicoes(Comb, J, L, C, 3).
+
+% conta quantas posições seriam do jogador (incluindo jogada simulada)
+conta_posicoes([], _, _, _, 0).
+conta_posicoes([(L,C)|T], J, L1, C1, N) :-
+    ( (L = L1, C = C1) ; jogada(L,C,J) ),
+    conta_posicoes(T, J, L1, C1, N1),
+    N is N1 + 1.
+conta_posicoes([(L,C)|T], J, L1, C1, N) :-
+    \+ ( (L = L1, C = C1) ; jogada(L,C,J) ),
+    conta_posicoes(T, J, L1, C1, N).
+
+% ganhar
+ganhar(J,L,C) :-
     livre(L,C),
-    assert(jogada(L,C,J)),
-    vitoria(J),
-    retract(jogada(L,C,J)).
+    vitoria_com_jogada(J,L,C).
 
 % bloquear adversário
 bloquear(J,L,C) :-
-    (J = x -> O = o ; O = x),
-    quase_vitoria(O,L,C).
+    outro(J,O),
+    ganhar(O,L,C).
 
-% melhor jogada (prioridade lógica)
+% melhor jogada
 melhor_jogada(J,L,C) :-
-    quase_vitoria(J,L,C), !.        % ganhar
+    ganhar(J,L,C), !.
 
 melhor_jogada(J,L,C) :-
-    bloquear(J,L,C), !.            % bloquear
+    bloquear(J,L,C), !.
 
-melhor_jogada(_,2,2) :-            % centro
+melhor_jogada(_,2,2) :-
     livre(2,2), !.
 
-melhor_jogada(_,L,C) :-            % qualquer livre
+melhor_jogada(_,L,C) :-
     livre(L,C).
 
 % =========================
-% 6. ESTADO DO JOGO
+% 8. ESTADO DO JOGO
 % =========================
 
 vencedor(J) :- vitoria(J).
@@ -105,19 +154,16 @@ empate :-
     \+ livre(_, _).
 
 % =========================
-% 7. CONSULTAS
+% 9. CONSULTAS
 % =========================
 
-% todas livres
 todas_livres(L) :-
     findall((X,Y), livre(X,Y), L).
 
-% jogadas possíveis do próximo jogador
 jogadas_proximas(L) :-
     proximo(J),
     findall((X,Y,J), livre(X,Y), L).
 
-% sugestão de jogada inteligente
 sugestao(L,C) :-
     proximo(J),
     melhor_jogada(J,L,C).
