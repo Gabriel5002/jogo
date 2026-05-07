@@ -1,169 +1,155 @@
 % ==========================================================
-% JOGO DA VELHA - VERSÃO MELHORADA
+% RPG LÓGICO INFERNAL - PLANEJAMENTO OTIMIZADO
 % ==========================================================
 
 % =========================
-% 1. FATOS INICIAIS
+% 1. ESTADO
 % =========================
 
-jogada(1,1,x).
-jogada(1,2,x).
-jogada(1,3,x).
+% estado(Posicao, Inventario, Derrotados, Vida, Custo)
 
-jogada(2,1,o).
-jogada(2,2,o).
-
-jogada(3,1,x).
+estado_inicial(
+    estado(vila, [], [], 12, 0)
+).
 
 % =========================
-% 2. ESTRUTURA DO TABULEIRO
+% 2. MAPA
 % =========================
 
-linha(1). linha(2). linha(3).
-coluna(1). coluna(2). coluna(3).
+conectado(vila, floresta).
+conectado(floresta, caverna).
+conectado(caverna, ruinas).
+conectado(ruinas, torre).
+conectado(torre, dragao).
 
-% todas posições possíveis
-pos(L,C) :- linha(L), coluna(C).
-
-% =========================
-% 3. OCUPAÇÃO
-% =========================
-
-ocupado(L,C) :- jogada(L,C,_).
-
-livre(L,C) :- pos(L,C), \+ ocupado(L,C).
+caminho(X,Y) :- conectado(X,Y).
+caminho(X,Y) :- conectado(Y,X).
 
 % =========================
-% 4. COMBINAÇÕES VENCEDORAS
+% 3. ITENS
 % =========================
 
-combinacao([
-    (1,1),(1,2),(1,3)
-]).
-combinacao([
-    (2,1),(2,2),(2,3)
-]).
-combinacao([
-    (3,1),(3,2),(3,3)
-]).
-combinacao([
-    (1,1),(2,1),(3,1)
-]).
-combinacao([
-    (1,2),(2,2),(3,2)
-]).
-combinacao([
-    (1,3),(2,3),(3,3)
-]).
-combinacao([
-    (1,1),(2,2),(3,3)
-]).
-combinacao([
-    (1,3),(2,2),(3,1)
-]).
-
-% verifica se todas posições pertencem ao jogador
-todas_do_jogador([], _).
-todas_do_jogador([(L,C)|T], J) :-
-    jogada(L,C,J),
-    todas_do_jogador(T, J).
-
-% vitória genérica
-vitoria(J) :-
-    combinacao(Comb),
-    todas_do_jogador(Comb, J).
+local_item(espada, floresta).
+local_item(escudo, vila).
+local_item(chave, caverna).
+local_item(cajado, torre).
+local_item(armadura, ruinas).
 
 % =========================
-% 5. JOGADORES
+% 4. INIMIGOS
 % =========================
 
-jogador(x).
-jogador(o).
-
-outro(x,o).
-outro(o,x).
-
-% =========================
-% 6. PRÓXIMO JOGADOR
-% =========================
-
-conta(J,N) :-
-    findall(_, jogada(_,_,J), L),
-    length(L,N).
-
-proximo(x) :-
-    conta(x,NX), conta(o,NO),
-    NX =:= NO.
-
-proximo(o) :-
-    conta(x,NX), conta(o,NO),
-    NX > NO.
+inimigo(goblin, floresta, 5).
+inimigo(troll, caverna, 9).
+inimigo(espectro, ruinas, 13).
+inimigo(dragao, dragao, 25).
 
 % =========================
-% 7. IA (SEM ASSERT/RETRACT)
+% 5. PODER
 % =========================
 
-% verifica vitória simulando jogada
-vitoria_com_jogada(J,L,C) :-
-    combinacao(Comb),
-    member((L,C), Comb),
-    conta_posicoes(Comb, J, L, C, 3).
-
-% conta quantas posições seriam do jogador (incluindo jogada simulada)
-conta_posicoes([], _, _, _, 0).
-conta_posicoes([(L,C)|T], J, L1, C1, N) :-
-    ( (L = L1, C = C1) ; jogada(L,C,J) ),
-    conta_posicoes(T, J, L1, C1, N1),
-    N is N1 + 1.
-conta_posicoes([(L,C)|T], J, L1, C1, N) :-
-    \+ ( (L = L1, C = C1) ; jogada(L,C,J) ),
-    conta_posicoes(T, J, L1, C1, N).
-
-% ganhar
-ganhar(J,L,C) :-
-    livre(L,C),
-    vitoria_com_jogada(J,L,C).
-
-% bloquear adversário
-bloquear(J,L,C) :-
-    outro(J,O),
-    ganhar(O,L,C).
-
-% melhor jogada
-melhor_jogada(J,L,C) :-
-    ganhar(J,L,C), !.
-
-melhor_jogada(J,L,C) :-
-    bloquear(J,L,C), !.
-
-melhor_jogada(_,2,2) :-
-    livre(2,2), !.
-
-melhor_jogada(_,L,C) :-
-    livre(L,C).
+poder([],1).
+poder([espada|T],P) :- poder(T,P1), P is P1 + 6.
+poder([escudo|T],P) :- poder(T,P1), P is P1 + 3.
+poder([cajado|T],P) :- poder(T,P1), P is P1 + 7.
+poder([armadura|T],P) :- poder(T,P1), P is P1 + 5.
+poder([_|T],P) :- poder(T,P).
 
 % =========================
-% 8. ESTADO DO JOGO
+% 6. AÇÕES COM CUSTO
 % =========================
 
-vencedor(J) :- vitoria(J).
+% mover custa 1
+acao(
+    mover(De,Para),
+    estado(De,Inv,Der,V,C),
+    estado(Para,Inv,Der,V,C1)
+) :-
+    caminho(De,Para),
+    C1 is C + 1.
 
-empate :-
-    \+ vencedor(x),
-    \+ vencedor(o),
-    \+ livre(_, _).
+% pegar item custa 1
+acao(
+    pegar(Item),
+    estado(Local,Inv,Der,V,C),
+    estado(Local,[Item|Inv],Der,V,C1)
+) :-
+    local_item(Item, Local),
+    \+ member(Item, Inv),
+    C1 is C + 1.
+
+% lutar custa vida e aumenta custo
+acao(
+    lutar(Inimigo),
+    estado(Local,Inv,Der,V,C),
+    estado(Local,Inv,[Inimigo|Der],V2,C1)
+) :-
+    inimigo(Inimigo, Local, Forca),
+    \+ member(Inimigo, Der),
+    poder(Inv, P),
+    P + V >= Forca,
+    V2 is V - 3,
+    V2 > 0,
+    C1 is C + 2.
 
 % =========================
-% 9. CONSULTAS
+% 7. RESTRIÇÕES INFERNAIS
 % =========================
 
-todas_livres(L) :-
-    findall((X,Y), livre(X,Y), L).
+% não pode lutar dragão sem chave
+restricao(estado(_,Inv,_,_,_)) :-
+    (member(dragao, Inv) -> member(chave, Inv) ; true).
 
-jogadas_proximas(L) :-
-    proximo(J),
-    findall((X,Y,J), livre(X,Y), L).
+% precisa de arma forte para dragão
+arma_forte(Inv) :-
+    member(espada, Inv);
+    member(cajado, Inv).
 
-sugestao(L,C) :-
-    proximo(J),
+% =========================
+% 8. OBJETIVO
+% =========================
+
+objetivo(
+    estado(dragao, Inv, Der, V, _)
+) :-
+    member(dragao, Der),
+    member(chave, Inv),
+    arma_forte(Inv),
+    V > 0.
+
+% =========================
+% 9. PLANEJAMENTO COM PODA
+% =========================
+
+planejar(Estado, _, [], Estado) :-
+    objetivo(Estado).
+
+planejar(Estado, Visitados, [Acao|Plano], Final) :-
+    acao(Acao, Estado, NovoEstado),
+    NovoEstado = estado(_,_,_,V,_),
+    V > 0, % poda por morte
+    \+ member(NovoEstado, Visitados),
+    restricao(NovoEstado),
+    planejar(NovoEstado, [NovoEstado|Visitados], Plano, Final).
+
+% =========================
+% 10. MELHOR SOLUÇÃO (OTIMIZAÇÃO)
+% =========================
+
+resolver_melhor(PlanoMelhor) :-
+    findall((Plano,Custo),
+        (
+            estado_inicial(E),
+            planejar(E,[E],Plano,estado(_,_,_,_,Custo))
+        ),
+        Solucoes),
+    melhor_plano(Solucoes, PlanoMelhor).
+
+melhor_plano([(P,_)], P).
+melhor_plano([(P1,C1),(P2,C2)|Resto], Melhor) :-
+    (C1 =< C2 ->
+        melhor_plano([(P1,C1)|Resto], Melhor)
+    ;
+        melhor_plano([(P2,C2)|Resto], Melhor)
+    ).
     melhor_jogada(J,L,C).
