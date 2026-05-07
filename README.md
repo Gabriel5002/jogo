@@ -1,7 +1,7 @@
 o jogo final é o trabalho final oficial jogo rpg.
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-resumo do jogo 
-
+resumo do jogo: 
+-
 Este código atua como um Mestre de RPG estrategista que funciona como o "Doutor Estranho": ele simula milhares de linhas do tempo para encontrar a única jornada onde o herói vence com perfeição.
 
 Aqui está o resumo unificado da engine:
@@ -26,7 +26,7 @@ Através da tentativa e erro, o código descarta rotas onde o herói morre ou pe
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Códigos do retorno:
-
+-
 resolver(Plano).
 
 resolver_melhor(Plano).
